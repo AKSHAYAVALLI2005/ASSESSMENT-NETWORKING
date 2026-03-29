@@ -1,0 +1,459 @@
+
+# Module 6
+
+## 1. Capture and analyze ARP packets using Wireshark. Inspect the ARP request and reply frames when your device attempts to find the router’s MAC address. Discuss the importance of ARP in packet forwarding.
+
+Answer 
+### Steps:
+1. Open Wireshark and start capture on the active network interface.
+2. Apply filter: `arp`
+3. Find your router IP using `ipconfig` (default gateway).
+4. Clear ARP cache: `arp -d *`
+5. Ping the router: `ping 192.168.1.1`
+6. Observe:
+- **ARP Request**: "Who has <router IP>? Tell <your IP>"
+- **ARP Reply**: "<router IP> is at <router MAC>"
+  
+### Importance of ARP in Packet Forwarding:
+- Converts IP address to MAC address
+- Enables communication within a LAN
+- Required to send packets to the default gateway
+- Works automatically and uses caching for efficiency
+- Essential for Layer 2 (Ethernet) data transmission
+
+---
+
+## 2. Manually configure static routes on a router to direct packets to different subnets. Use the ip route command and verify connectivity using ping and traceroute.
+
+Answer
+
+### Step 1: Create Network Topology
+- Place 2 routers (R1, R2) and 2 PCs in Cisco Packet Tracer.
+- Connect:
+  - PC1 to  R1
+  - R1 to R2
+  - R2 to PC2
+
+### Step 2: Assign IP Addresses to Router Interfaces
+
+#### On R1:
+1. Enter CLI:
+```
+enable
+configure terminal
+```
+
+2. Configure interfaces:
+```
+interface g0/0
+ip address 192.168.1.1 255.255.255.0
+no shutdown
+
+interface g0/1
+ip address 10.0.0.1 255.255.255.252
+no shutdown
+```
+
+#### On R2:
+1. Enter CLI:
+```
+enable
+configure terminal
+```
+
+2. Configure interfaces:
+```
+interface g0/0
+ip address 192.168.2.1 255.255.255.0
+no shutdown
+
+interface g0/1
+ip address 10.0.0.2 255.255.255.252
+no shutdown
+```
+
+
+### Step 3: Configure Static Routes
+
+#### On R1, Add route to reach Network 2:
+```
+ip route 192.168.2.0 255.255.255.0 10.0.0.2
+```
+
+#### On R2, Add route to reach Network 1:
+```
+ip route 192.168.1.0 255.255.255.0 10.0.0.1
+```
+
+### Step 4: Configure End Devices (PCs)
+
+#### PC1:
+- IP Address: 192.168.1.10  
+- Subnet Mask: 255.255.255.0  
+- Default Gateway: 192.168.1.1  
+
+#### PC2:
+- IP Address: 192.168.2.10  
+- Subnet Mask: 255.255.255.0  
+- Default Gateway: 192.168.2.1  
+
+### Step 5: Verify Connectivity 
+
+#### 1. Ping Test:
+- From PC1:
+```
+ping 192.168.2.10
+```
+- Expected: Successful replies
+
+#### 2. Traceroute Test:
+- From PC1:
+```
+tracert 192.168.2.10
+```
+
+#### On PC2: 
+#### 3. Ping Test:
+- From PC1:
+```
+ping 192.168.1.10
+```
+- Expected: Successful replies
+
+#### 4. Traceroute Test:
+- From PC1:
+```
+tracert 192.168.1.10
+```
+
+ 
+## 3. Given a network address of 10.0.0.0/24, divide it into 4 equal subnets. Calculate the new subnet mask.  Determine the valid host range for each subnet. Assign IP addresses to devices in Packet Tracer and verify connectivity.
+
+Answer
+
+### Step 1: Use Devices
+1 Router
+1 Switch
+4 PCs
+### Step 2: Create VLANs on Switch
+```
+enable
+configure terminal
+
+vlan 10
+vlan 20
+vlan 30
+vlan 40
+```
+
+### Step 3: Assign Ports to VLANs
+
+Example:
+```
+interface fa0/1
+switchport mode access
+switchport access vlan 10
+
+interface fa0/2
+switchport mode access
+switchport access vlan 20
+
+interface fa0/3
+switchport mode access
+switchport access vlan 30
+
+interface fa0/4
+switchport mode access
+switchport access vlan 40
+```
+
+### Step 4: Configure Trunk Port (Switch → Router)
+
+```
+interface fa0/24
+switchport mode trunk
+```
+
+
+### Step 5: Configure Router Subinterfaces
+```
+enable
+configure terminal
+
+interface g0/0
+no shutdown
+
+interface g0/0.10
+encapsulation dot1Q 10
+ip address 10.0.0.1 255.255.255.192
+
+interface g0/0.20
+encapsulation dot1Q 20
+ip address 10.0.0.65 255.255.255.192
+
+interface g0/0.30
+encapsulation dot1Q 30
+ip address 10.0.0.129 255.255.255.192
+
+interface g0/0.40
+encapsulation dot1Q 40
+ip address 10.0.0.193 255.255.255.192
+```
+
+
+### Step 6: Assign IPs to PCs
+| VLAN | Subnet	| PC IP	| Gateway |
+|-------|-------|-------|---------|
+|10	 | 10.0.0.0/26 | 10.0.0.2 |	10.0.0.1 |
+|20	 | 10.0.0.64/26	| 10.0.0.66 | 10.0.0.65 |
+|30	 | 10.0.0.128/26 | 10.0.0.130 | 10.0.0.129 |
+|40  | 10.0.0.192/26 | 10.0.0.194 | 10.0.0.193 |
+------------------------------------------
+
+
+### Step 7: Test Connectivity
+
+From any PC:
+```
+ping 10.0.0.66
+ping 10.0.0.130
+ping 10.0.0.194
+```
+
+
+## 4. You are given three IP addresses: 192.168.10.5, 172.20.15.1, and 8.8.8.8. Identify the class of each IP address. Determine if it is private or public. Explain how NAT would handle a private IP when accessing the internet.
+
+Answer:
+
+
+### IP Classification and NAT – Step-by-Step Guide
+
+### Step 1: IP Address Classes
+
+| Class | Range |
+|------|------|
+| Class A | 1.0.0.0 – 126.0.0.0 |
+| Class B | 128.0.0.0 – 191.255.0.0 |
+| Class C | 192.0.0.0 – 223.255.255.0 |
+
+---
+
+### Step 2: Identify Class of Each IP
+
+#### 1. 192.168.10.5
+- First octet: **192**
+- Falls in: **192–223**
+-  Class C
+
+
+#### 2. 172.20.15.1
+- First octet: **172**
+- Falls in: **128–191**
+-  Class B
+
+
+#### 3. 8.8.8.8
+- First octet: **8**
+- Falls in: **1–126**
+- Class A
+
+
+### Step 3: Identify Private vs Public IP
+
+#### Private IP Ranges:
+- 10.0.0.0 – 10.255.255.255
+- 172.16.0.0 – 172.31.255.255
+- 192.168.0.0 – 192.168.255.255
+
+---
+
+#### Check Each IP:
+
+| IP Address | Private/Public | Reason | Class
+|-----------|---------------|--------|--------|
+| 192.168.10.5 | Private | Falls in 192.168.x.x range |  C |
+| 172.20.15.1 | Private | Falls in 172.16–172.31 | B |
+| 8.8.8.8 | Public | Not in private range | A |
+
+---
+
+### Step 4: Network Address Translation (NAT) 
+
+NAT = Network Address Translation
+
+- Used to convert **private IP → public IP**
+- Required for internet communication
+
+---
+
+### Step 5: How NAT Works (Step-by-Step)
+
+1. Device sends request:
+
+```
+Source IP: 192.168.10.5
+Destination: 8.8.8.8
+```
+
+2. Router receives packet
+
+3. NAT process:
+- Replaces private IP with public IP
+
+```
+192.168.10.5 → 203.0.113.1 (example public IP)
+```
+
+4. Packet sent to internet
+
+5. Response comes back to router
+
+6. Router reverses NAT:
+
+```
+203.0.113.1 → 192.168.10.5
+```
+
+7. Packet delivered to original device
+
+
+### Step 6: Final Answer Summary
+
+| IP | Class | Type |
+|----|------|------|
+| 192.168.10.5 | Class C | Private |
+| 172.20.15.1 | Class B | Private |
+| 8.8.8.8 | Class A | Public |
+
+
+ 
+## 5. In Cisco Packet Tracer, configure NAT on a router to allow internal devices (192.168.1.x) to access the internet. Test connectivity by pinging an external public IP. Capture the traffic in Wireshark and analyze the source IP before and after NAT translation.
+
+
+
+### NAT Configuration in Cisco Packet Tracer (Step-by-Step Guide)
+
+---
+
+## Step 1: Build Topology
+- Add:
+  - 1 Router
+  - 1 Switch
+  - 1 PC (Internal network)
+  - 1 Server/PC (Internet side)
+- Connect:
+  - PC → Switch → Router → Server
+
+---
+
+## Step 2: Assign IP Addresses
+
+### Internal Network (LAN)
+- PC:
+  - IP: 192.168.1.10
+  - Subnet: 255.255.255.0
+  - Gateway: 192.168.1.1
+
+### Router Interfaces
+```
+
+enable
+configure terminal
+
+interface g0/0
+ip address 192.168.1.1 255.255.255.0
+no shutdown
+
+### External Network (Internet side)
+
+
+interface g0/1
+ip address 203.0.113.1 255.255.255.0
+no shutdown
+```
+
+### Server (Public side)
+- IP: 203.0.113.2
+- Subnet: 255.255.255.0
+- Gateway: 203.0.113.1
+
+---
+
+## Step 3: Configure NAT on Router
+
+### 1. Define inside and outside interfaces
+```
+
+interface g0/0
+ip nat inside
+
+interface g0/1
+ip nat outside
+```
+
+### 2. Create Access List for internal network
+```
+access-list 1 permit 192.168.1.0 0.0.0.255
+```
+
+### 3. Enable NAT (PAT – Overload)
+```
+ip nat inside source list 1 interface g0/1 overload
+```
+
+## Step 4: Verify Connectivity
+
+### From PC:
+```
+
+ping 203.0.113.2
+
+```
+
+ Expected: Successful replies
+
+---
+
+## Step 5: Verify NAT Table
+```
+
+show ip nat translations
+
+```
+
+ You should see:
+- Inside local (192.168.1.10)
+- Inside global (203.0.113.1)
+
+---
+
+## Step 6: Capture Traffic (Wireshark in Packet Tracer)
+
+1. Switch to **Simulation Mode**
+2. Filter: ICMP
+3. Send ping from PC
+4. Observe packets:
+   - Before router:
+     - Source IP = **192.168.1.10**
+   - After router:
+     - Source IP = **203.0.113.1**
+
+
+## Analysis (Before vs After NAT)
+
+| Stage | Source IP | Destination IP |
+|------|----------|----------------|
+| Before NAT | 192.168.1.10 | 203.0.113.2 |
+| After NAT | 203.0.113.1 | 203.0.113.2 |
+
+---
+
+## Explanation
+
+- Private IP cannot be routed on the internet
+- NAT replaces it with router’s public IP
+- Router keeps track using NAT table
+- Response is mapped back to original device
+
+---
+```

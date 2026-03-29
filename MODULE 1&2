@@ -1,0 +1,120 @@
+1.
+
+Answer: Use `scp` or `cp` with recursive option
+Explanation:
+To copy a folder with multiple files, use:
+
+* `scp -r folder_name user@destination:/path` → copies folder over network securely
+* `cp -r source_folder destination_path` → copies locally including all files and subfolders
+
+2.
+
+Answer: Use FTP/SFTP clients or commands
+Explanation:
+
+* Start FTP/SFTP server on one machine
+* Use commands like:
+
+  * `put filename` → upload file to server
+  * `get filename` → download file from server
+* SFTP is more secure (uses SSH encryption), while FTP is not secure
+
+3.
+
+Answer: Use Wireshark, TCPdump, and Cisco Packet Tracer
+Explanation:
+
+* Capture and analyze network packets
+* Apply filters like:
+
+  * `ip.addr == 192.168.1.1`
+  * `tcp.port == 80`
+* Helps in troubleshooting and understanding packet flow
+
+4.
+
+Answer: Use Linux utilities like `ping` and `arp`
+Explanation:
+
+* `ping` → checks connectivity between hosts
+* `arp -a` → displays IP to MAC address mapping
+* `ifconfig` or `ip a` → shows network interface details (IP, MAC, status)
+
+5.
+
+Answer: IP conflict occurs when duplicate IPs exist
+Explanation:
+
+* Two devices with same IP cause network conflict
+* Results in:
+
+  * Loss of connectivity
+  * Network instability
+* DHCP or manual IP assignment should ensure unique IPs
+
+6.
+
+Answer: Use remote access tools
+Explanation:
+
+* Tools like VNC Viewer, AnyDesk, TeamViewer, Remote Desktop
+* Allow remote control of another system over network
+* Require proper authentication and network access
+
+7.
+
+Answer: Check default gateway reachability using `ping`
+Explanation:
+
+* Use: `ping <gateway_ip>`
+* Default gateway is the router IP (e.g., 192.168.1.1)
+* If reachable → network is properly connected to router
+
+8.
+
+Answer: Use `ifconfig` or `ipconfig`
+Explanation:
+
+* Shows network interface details:
+
+  * IP address
+  * Subnet mask
+  * MAC address
+  * MTU (Maximum Transmission Unit)
+  * Interface speed
+* Helps in network diagnostics
+
+9.
+
+Answer: Access router via browser
+Explanation:
+
+* Open browser and enter:
+
+  * `http://192.168.1.1` or `192.168.0.1`
+* Login to router admin panel
+* View connected devices list to check active clients
+
+10.
+
+Answer: DHCP assigns IP automatically
+Explanation:
+
+* DHCP (Dynamic Host Configuration Protocol) assigns:
+
+  * IP address
+  * Subnet mask
+  * Default gateway
+  * DNS server
+* Works in steps:
+
+  * Discover → Offer → Request → Acknowledge (DORA process)
+
+11.
+
+Answer: Use SSH and Telnet
+Explanation:
+
+* `ssh user@ip_address` → secure remote login (encrypted)
+* `telnet ip_address` → remote login (not secure)
+* SSH is preferred due to security, encryption, and authentication

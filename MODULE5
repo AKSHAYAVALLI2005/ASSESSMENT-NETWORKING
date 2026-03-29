@@ -1,0 +1,717 @@
+Question 1:
+# Capturing and Analyzing ARP Packets Using Wireshark
+
+## What is ARP?
+ARP (Address Resolution Protocol) translates IP addresses to MAC addresses so data can be delivered at the hardware level on a LAN. It has two messages — a **Request** (broadcast) and a **Reply** (unicast).
+
+---
+
+## Setup
+
+1. Open **Wireshark on Windows** and select your Wi-Fi or Ethernet adapter
+2. Apply filter in the filter bar:
+```
+arp
+```
+3. Find your gateway IP — open Windows CMD:
+```cmd
+ipconfig
+```
+4. Clear ARP cache and ping your gateway:
+```cmd
+arp -d *
+ping 192.168.1.1
+```
+ARP packets will immediately appear in Wireshark.
+
+Question 2:
+# ARP Spoofing Attack Simulation — Cisco Packet Tracer
+
+## What is ARP Spoofing?
+
+ARP Spoofing is an attack where a malicious device sends fake ARP replies to poison the ARP cache of a victim. Since ARP has no authentication, the victim blindly trusts the reply and updates its ARP cache with the attacker's MAC address mapped to a legitimate IP (such as the router). All traffic meant for that IP is then redirected to the attacker.
+
+---
+
+## Network Setup
+
+| Device | IP Address | Role |
+|--------|-----------|------|
+| PC0 | 192.168.1.10 | Victim |
+| PC1 | 192.168.1.20 | Attacker |
+| Router | 192.168.1.1 | Gateway |
+| Switch | — | Connects all devices |
+
+---
+
+## Steps Performed
+
+Step 1 — Populate ARP Table (Before Attack)**
+
+Pinged PC1 and Router from PC0 to populate the ARP cache:
+```
+ping 192.168.1.20
+ping 192.168.1.1
+arp -a
+```
+
+ARP table before attack:
+```
+192.168.1.1  →  0002.1676.2e01  ← Router's real MAC 
+192.168.1.20 →  0090.2b05.e8cd  ← PC1's real MAC 
+```
+
+**Step 2 — Shutdown Router Interface**
+
+Router interface was shut down to simulate it being unreachable:
+```
+enable
+configure terminal
+interface gigabitEthernet 0/0/0
+shutdown
+exit
+```
+
+**Step 3 — Attacker Takes Router's IP**
+
+PC1's IP was changed to the router's IP address:
+```
+IP Address  : 192.168.1.1
+Subnet Mask : 255.255.255.0
+```
+
+**Step 4 — Trigger the Attack**
+
+Pinged the router IP from PC0:
+```
+ping 192.168.1.1
+```
+
+Since the router was down, PC1 responded to the ARP request claiming to be 192.168.1.1. PC0 believed the reply and updated its ARP cache.
+
+---
+
+## Result — ARP Cache Poisoned
+
+ARP table after attack:
+```
+192.168.1.1  →  0090.2b05.e8cd  ← PC1's MAC  (was Router's MAC!)
+192.168.1.20 →  0090.2b05.e8cd  ← PC1's MAC
+```
+
+Both the router IP and PC1's IP now point to the same MAC address — PC1's MAC. This proves that PC0's ARP cache was successfully poisoned.
+
+---
+
+## Impact
+
+Any traffic PC0 sends to the router (192.168.1.1) is now redirected to PC1 (Attacker). The attacker can read, modify or drop all packets — making this a classic Man in the Middle attack.
+
+---
+
+## Why ARP Spoofing Works
+
+ARP has no verification or authentication mechanism. Any device can send an ARP reply claiming any IP address and the receiving device will trust it and update its cache immediately.
+
+---
+
+## Prevention
+
+| Method | How it Helps |
+|--------|-------------|
+| Static ARP entries | Manually map IP to MAC — cannot be overwritten |
+| Dynamic ARP Inspection | Switch validates ARP packets against DHCP table |
+| Network Encryption | Even if intercepted, data cannot be read |
+
+Question 3:
+# Manually Configuring Static IPs and Verifying Connectivity Using Ping
+
+## Overview
+
+Static IP configuration means manually assigning a fixed IP address to a device instead of letting DHCP assign one automatically. In this exercise, we demonstrate static IP assignment and connectivity verification using two virtual interfaces inside WSL — no extra devices needed.
+
+---
+
+## Approach — Virtual Ethernet Pair (veth) in WSL
+
+We create two virtual interfaces (`veth0` and `veth1`), assign static IPs to each, and ping between them. This simulates two devices on the same network with manually configured static IPs.
+```
+veth0 (10.0.0.1)  ←──────────────────►  veth1 (10.0.0.2)
+  "Device A"                               "Device B"
+```
+
+---
+
+## Step 1 — Create a Virtual Ethernet Pair
+```bash
+sudo ip link add veth0 type veth peer name veth1
+```
+
+This creates two virtual interfaces that are directly connected — whatever goes into one comes out the other, exactly like a crossover cable between two devices.
+
+---
+
+## Step 2 — Assign Static IPs
+```bash
+sudo ip addr add 10.0.0.1/24 dev veth0
+sudo ip addr add 10.0.0.2/24 dev veth1
+```
+
+These are manually configured static IPs — no DHCP involved. Both are on the same subnet (`10.0.0.0/24`) so they can communicate directly.
+
+---
+
+## Step 3 — Bring the Interfaces Up
+```bash
+sudo ip link set veth0 up
+sudo ip link set veth1 up
+```
+
+---
+
+## Step 4 — Verify IP Assignment
+```bash
+ip addr show veth0
+ip addr show veth1
+```
+
+Expected output:
+```
+veth0: <BROADCAST,MULTICAST,UP>
+    inet 10.0.0.1/24 scope global veth0
+
+veth1: <BROADCAST,MULTICAST,UP>
+    inet 10.0.0.2/24 scope global veth1
+```
+
+---
+
+## Step 5 — Verify Connectivity Using Ping
+
+**Ping from veth0 to veth1:**
+```bash
+ping -c 4 -I veth0 10.0.0.2
+```
+
+**Ping from veth1 to veth0:**
+```bash
+ping -c 4 -I veth1 10.0.0.1
+```
+
+Expected output:
+```
+PING 10.0.0.2 (10.0.0.2) 56(84) bytes of data.
+64 bytes from 10.0.0.2: icmp_seq=1 ttl=64 time=0.045 ms
+64 bytes from 10.0.0.2: icmp_seq=2 ttl=64 time=0.052 ms
+64 bytes from 10.0.0.2: icmp_seq=3 ttl=64 time=0.048 ms
+64 bytes from 10.0.0.2: icmp_seq=4 ttl=64 time=0.051 ms
+
+--- 10.0.0.2 ping statistics ---
+4 packets transmitted, 4 received, 0% packet loss
+```
+
+Successful replies confirm that static IP configuration is correct and connectivity between the two interfaces is working.
+
+---
+
+## Step 6 — View the Route Table
+```bash
+ip route show
+```
+
+You will see entries like:
+```
+10.0.0.0/24 dev veth0 proto kernel scope link src 10.0.0.1
+10.0.0.0/24 dev veth1 proto kernel scope link src 10.0.0.2
+```
+
+This confirms the kernel has automatically created routes for both static IPs within the same subnet.
+
+---
+
+## Step 7 — Cleanup
+```bash
+sudo ip link delete veth0
+```
+
+Deleting one end of the pair automatically removes the other. Verify they are gone:
+```bash
+ip link show | grep veth
+```
+
+---
+
+## Command Reference
+
+| Task | Command |
+|---|---|
+| Create veth pair | `ip link add veth0 type veth peer name veth1` |
+| Assign static IP | `ip addr add 10.0.0.1/24 dev veth0` |
+| Bring interface up | `ip link set veth0 up` |
+| Verify IP assignment | `ip addr show veth0` |
+| Ping between interfaces | `ping -c 4 -I veth0 10.0.0.2` |
+| View routing table | `ip route show` |
+| Delete veth pair | `ip link delete veth0` |
+
+---
+
+## Why Static IP Instead of DHCP?
+
+| | Static IP | DHCP |
+|---|---|---|
+| Assignment | Manual | Automatic |
+| Address changes | Never | Can change on reconnect |
+| Use case | Servers, routers, printers | Regular client devices |
+| Configuration effort | Manual per device | Automatic |
+
+Static IPs are preferred when a device needs to be consistently reachable at the same address — such as a server, printer, or network gateway. In this exercise, both `veth0` and `veth1` act as such devices with fixed, manually assigned addresses.
+
+Question 4:
+# Capturing and Analyzing DHCP Messages Using Wireshark
+
+## What is DHCP?
+
+DHCP (Dynamic Host Configuration Protocol) automatically assigns IP addresses to devices on a network. When a device connects, it goes through a four-step process to obtain an IP address from a DHCP server (usually your router).
+
+The four messages are commonly called **DORA**:
+
+| Step | Message | Sent By | Purpose |
+|---|---|---|---|
+| 1 | Discover | Client | "I need an IP address, is there a DHCP server?" |
+| 2 | Offer | Server | "I have an IP for you, here it is" |
+| 3 | Request | Client | "I accept that IP, please confirm" |
+| 4 | Acknowledge | Server | "Confirmed, that IP is yours" |
+
+---
+
+## Setting Up Wireshark
+
+**Step 1 — Open Wireshark as Administrator**
+- Right click Wireshark → Run as Administrator
+
+**Step 2 — Select Wi-Fi adapter**
+- Choose the adapter with a moving graph line
+
+**Step 3 — Apply DHCP filter**
+```
+udp.port == 67 || udp.port == 68
+```
+Or simply:
+```
+dhcp
+```
+
+---
+
+## Generating DHCP Traffic
+
+Open CMD as Administrator and release your current IP, then request a new one:
+```cmd
+ipconfig /release
+ipconfig /renew
+```
+
+`/release` forces your PC to give up its current IP — triggering a fresh DORA exchange when `/renew` runs.
+
+---
+
+## What You Will See in Wireshark
+```
+No.  Source          Destination     Protocol  Info
+1    0.0.0.0         255.255.255.255 DHCP      DHCP Discover
+2    192.168.31.1    192.168.31.223  DHCP      DHCP Offer
+3    0.0.0.0         255.255.255.255 DHCP      DHCP Request
+4    192.168.31.1    192.168.31.223  DHCP      DHCP ACK
+```
+
+---
+
+## Step 1 — DHCP Discover
+
+Click the **DHCP Discover** packet and expand **Dynamic Host Configuration Protocol** in the middle panel:
+```
+Message type:     Boot Request (1)
+Client IP:        0.0.0.0         ← has no IP yet
+Your IP:          0.0.0.0
+Server IP:        0.0.0.0
+Client MAC:       aa:bb:cc:dd:ee:ff
+Option: DHCP Message Type = Discover
+```
+
+- Sent from `0.0.0.0` because the client has no IP yet
+- Sent to `255.255.255.255` (broadcast) because it does not know the server's address
+- Contains the client's MAC address so the server knows who to reply to
+
+---
+
+## Step 2 — DHCP Offer
+
+Click the **DHCP Offer** packet:
+```
+Message type:     Boot Reply (2)
+Client IP:        0.0.0.0
+Your IP:          192.168.31.223    ← IP being offered to the client
+Server IP:        192.168.31.1      ← router/DHCP server
+Client MAC:       aa:bb:cc:dd:ee:ff
+Option: DHCP Message Type = Offer
+Option: Subnet Mask = 255.255.255.0
+Option: Router = 192.168.31.1
+Option: DNS = 8.8.8.8
+Option: Lease Time = 86400 seconds
+```
+
+- Server responds with an IP offer
+- Includes subnet mask, gateway, DNS and lease time
+- Still sent as broadcast because the client has no IP yet
+
+---
+
+## Step 3 — DHCP Request
+
+Click the **DHCP Request** packet:
+```
+Message type:     Boot Request (1)
+Client IP:        0.0.0.0
+Your IP:          0.0.0.0
+Client MAC:       aa:bb:cc:dd:ee:ff
+Option: DHCP Message Type = Request
+Option: Requested IP = 192.168.31.223
+Option: Server Identifier = 192.168.31.1
+```
+
+- Client formally requests the offered IP
+- Still broadcast — notifies other DHCP servers on the network that their offers were not accepted
+- Includes the server identifier so the chosen server knows it was selected
+
+---
+
+## Step 4 — DHCP Acknowledge
+
+Click the **DHCP ACK** packet:
+```
+Message type:     Boot Reply (2)
+Your IP:          192.168.31.223    ← confirmed IP
+Server IP:        192.168.31.1
+Client MAC:       aa:bb:cc:dd:ee:ff
+Option: DHCP Message Type = ACK
+Option: Lease Time = 86400
+Option: Subnet Mask = 255.255.255.0
+Option: Router = 192.168.31.1
+Option: DNS = 8.8.8.8
+```
+
+- Server confirms the IP assignment
+- Client can now use `192.168.31.223` for the duration of the lease time
+- After lease expires the whole process repeats
+
+---
+
+## Full DORA Flow
+```
+Client (0.0.0.0)                      DHCP Server (192.168.31.1)
+      |                                           |
+      |-----DISCOVER (broadcast)---------------->|
+      |  "Anyone have an IP for me?"              |
+      |                                           |
+      |<----OFFER (broadcast)---------------------|
+      |  "Here, take 192.168.31.223"              |
+      |                                           |
+      |-----REQUEST (broadcast)----------------->|
+      |  "I accept 192.168.31.223"                |
+      |                                           |
+      |<----ACK (broadcast)----------------------|
+      |  "Confirmed, it's yours for 86400s"       |
+      |                                           |
+      | (client configures IP and joins network)  |
+```
+
+---
+
+## Key Ports Used by DHCP
+
+| Port | Used By | Purpose |
+|---|---|---|
+| UDP 67 | DHCP Server | Receives requests from clients |
+| UDP 68 | DHCP Client | Receives replies from server |
+
+DHCP uses UDP because the client has no IP yet when the process starts — a TCP connection would be impossible without one.
+
+---
+
+## Lease Time — What Happens After
+
+Once the lease time expires (86400 seconds = 24 hours in the example above), the client sends a **DHCP Request** directly to the server to renew it. If the server is available it sends back an **ACK** and the lease is extended. If the server does not respond, the client must restart the full DORA process and may receive a different IP.
+
+---
+
+Question 5:
+# Subnetting and Network Configuration using Cisco Packet Tracer
+
+Answer
+
+### Step 1: Use Devices
+1 Router
+1 Switch
+4 PCs
+### Step 2: Create VLANs on Switch
+```
+enable
+configure terminal
+
+vlan 10
+vlan 20
+vlan 30
+vlan 40
+```
+
+### Step 3: Assign Ports to VLANs
+
+Example:
+```
+interface fa0/1
+switchport mode access
+switchport access vlan 10
+
+interface fa0/2
+switchport mode access
+switchport access vlan 20
+
+interface fa0/3
+switchport mode access
+switchport access vlan 30
+
+interface fa0/4
+switchport mode access
+switchport access vlan 40
+```
+
+### Step 4: Configure Trunk Port (Switch → Router)
+
+```
+interface fa0/24
+switchport mode trunk
+```
+
+
+### Step 5: Configure Router Subinterfaces
+```
+enable
+configure terminal
+
+interface g0/0
+no shutdown
+
+interface g0/0.10
+encapsulation dot1Q 10
+ip address 10.0.0.1 255.255.255.192
+
+interface g0/0.20
+encapsulation dot1Q 20
+ip address 10.0.0.65 255.255.255.192
+
+interface g0/0.30
+encapsulation dot1Q 30
+ip address 10.0.0.129 255.255.255.192
+
+interface g0/0.40
+encapsulation dot1Q 40
+ip address 10.0.0.193 255.255.255.192
+```
+
+
+### Step 6: Assign IPs to PCs
+| VLAN | Subnet	| PC IP	| Gateway |
+|-------|-------|-------|---------|
+|10	 | 10.0.0.0/26 | 10.0.0.2 |	10.0.0.1 |
+|20	 | 10.0.0.64/26	| 10.0.0.66 | 10.0.0.65 |
+|30	 | 10.0.0.128/26 | 10.0.0.130 | 10.0.0.129 |
+|40  | 10.0.0.192/26 | 10.0.0.194 | 10.0.0.193 |
+------------------------------------------
+
+### Step 7: Test Connectivity
+
+From any PC:
+```
+ping 10.0.0.66
+ping 10.0.0.130
+ping 10.0.0.194
+```
+
+Question 6:
+# IP Address Classification and Default Subnet Masks
+
+## Problem Statement
+You are given three IP addresses:
+- 10.1.1.1  
+- 172.16.5.10  
+- 192.168.1.5  
+
+Tasks:
+1. Identify the class of each IP address  
+2. Determine the default subnet mask for each class  
+3. Provide the IP address range for each class  
+
+---
+
+# Step 1: IP Address Classes Overview
+
+IP addresses are divided into classes based on the first octet.
+
+| Class | First Octet Range | Default Subnet Mask |
+|------|------------------|---------------------|
+| Class A | 1 – 126 | 255.0.0.0 |
+| Class B | 128 – 191 | 255.255.0.0 |
+| Class C | 192 – 223 | 255.255.255.0 |
+
+---
+
+# Step 2: Classification of Given IP Addresses
+
+## 1. IP Address: 10.1.1.1
+- First octet: 10  
+- Range: 1 – 126  
+
+Class: Class A  
+Default Subnet Mask: 255.0.0.0  
+
+---
+
+## 2. IP Address: 172.16.5.10
+- First octet: 172  
+- Range: 128 – 191  
+
+Class: Class B  
+Default Subnet Mask: 255.255.0.0  
+
+---
+
+## 3. IP Address: 192.168.1.5
+- First octet: 192  
+- Range: 192 – 223  
+
+Class: Class C  
+Default Subnet Mask: 255.255.255.0  
+
+---
+
+# Step 3: IP Address Ranges for Each Class
+
+## Class A
+- Range: 1.0.0.0 to 126.255.255.255  
+- Default Subnet Mask: 255.0.0.0  
+
+## Class B
+- Range: 128.0.0.0 to 191.255.255.255  
+- Default Subnet Mask: 255.255.0.0  
+
+## Class C
+- Range: 192.0.0.0 to 223.255.255.255  
+- Default Subnet Mask: 255.255.255.0  
+
+---
+
+# Conclusion
+
+- 10.1.1.1 belongs to Class A with subnet mask 255.0.0.0  
+- 172.16.5.10 belongs to Class B with subnet mask 255.255.0.0  
+- 192.168.1.5 belongs to Class C with subnet mask 255.255.255.0  
+
+Each class is identified based on the first octet, and each has a predefined default subnet mask and address range.
+
+Question 7:
+# NAT Configuration and Verification using Cisco Packet Tracer
+
+## Problem Statement
+Create a small network in Cisco Packet Tracer with:
+- 2 PCs
+- 1 Router
+- 1 Server (to simulate the Internet)
+
+Use private IP addresses (192.168.1.x) on PCs and configure NAT on the router to allow communication with an external network. Verify using ping and packet capture.
+
+---
+
+# Step 1: Network Topology
+
+## Devices Used
+- 1 Router
+- 1 Switch
+- 2 PCs
+- 1 Server
+
+## Connections
+- PC1 → Switch (Fa0/2)
+- PC2 → Switch (Fa0/3)
+- Switch → Router (GigabitEthernet 0/0/0)
+- Router (GigabitEthernet 0/0/1) → Server
+
+---
+
+# Step 2: IP Addressing
+
+## PC1
+- IP Address: 192.168.1.2  
+- Subnet Mask: 255.255.255.0  
+- Default Gateway: 192.168.1.1  
+
+## PC2
+- IP Address: 192.168.1.3  
+- Subnet Mask: 255.255.255.0  
+- Default Gateway: 192.168.1.1  
+
+## Server (Internet Simulation)
+- IP Address: 200.1.1.2  
+- Subnet Mask: 255.255.255.0  
+- Default Gateway: 200.1.1.1  
+
+---
+
+# Step 3: Router Configuration
+
+## Enter CLI
+```bash
+enable
+configure terminal
+```
+# Configure Inside Interface (LAN)
+```bash
+interface gigabitEthernet 0/0/0
+ip address 192.168.1.1 255.255.255.0
+ip nat inside
+no shutdown
+```
+# Configure Outside Interface (Internet)
+```bash
+interface gigabitEthernet 0/0/1
+ip address 200.1.1.1 255.255.255.0
+ip nat outside
+no shutdown
+```
+# Step 4: Configure NAT (PAT)
+## Create Access List
+```bash
+access-list 1 permit 192.168.1.0 0.0.0.255
+```
+# Enable NAT Overload
+```bash
+ip nat inside source list 1 interface gigabitEthernet 0/0/1 overload
+```
+# Step 5: Verify Connectivity
+
+## From PC1 or PC2:
+```bash
+ping 200.1.1.2
+```
+## Expected Result
+First ping may fail (ARP process)
+Subsequent pings should succeed
+
+# Step 6: Verify NAT Translation
+
+## On the router:
+```bash
+show ip nat translations
+```
+## Example Output
+Inside local      Inside global
+192.168.1.2   →   200.1.1.1

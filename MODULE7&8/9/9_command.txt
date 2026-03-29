@@ -1,0 +1,31 @@
+9. SWITCH CONFIG
+Switch(config)# vlan 10
+Switch(config-vlan)# name DATA
+Switch(config)# vlan 20
+Switch(config-vlan)# name SALES
+
+Switch(config)# interface range fa0/1-2
+Switch(config-if-range)# switchport mode access
+Switch(config-if-range)# switchport access vlan 10
+
+Switch(config)# interface range fa0/3-4
+Switch(config-if-range)# switchport mode access
+Switch(config-if-range)# switchport access vlan 20
+
+Switch(config)# interface fa0/24
+Switch(config-if)# switchport mode trunk
+Switch(config-if)# switchport trunk allowed vlan 10,20
+
+ROUTER 1941 CONFIG
+Router(config)# interface GigabitEthernet 0/0
+Router(config-if)# no shutdown
+
+Router(config)# interface GigabitEthernet 0/0.10
+Router(config-subif)# encapsulation dot1Q 10
+Router(config-subif)# ip address 192.168.10.1 255.255.255.0
+Router(config-subif)# no shutdown
+
+Router(config)# interface GigabitEthernet 0/0.20
+Router(config-subif)# encapsulation dot1Q 20
+Router(config-subif)# ip address 192.168.20.1 255.255.255.0
+Router(config-subif)# no shutdown
